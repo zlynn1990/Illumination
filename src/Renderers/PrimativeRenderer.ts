@@ -15,19 +15,21 @@ export function RenderLines(context: CanvasRenderingContext2D, segments: LineSeg
 }
 
 export function RenderPolygons(context: CanvasRenderingContext2D, litPolygons: LitPolygon[]) {
-    context.fillStyle = '#FFFFFF';
-
     litPolygons.forEach(litPolygon => {
-        context.globalAlpha = litPolygon.intensity;
+        context.fillStyle = "#ffffff";
+        context.globalAlpha = litPolygon.intensity;    
 
-        let polygon = litPolygon.polygon;
+        // Valid polygon must have at least 3 points
+        if (litPolygon.points && litPolygon.points.length > 2) {
+            context.beginPath();
+            context.moveTo(litPolygon.points[0].x, litPolygon.points[0].y);
 
-        context.beginPath();
-        context.moveTo(polygon.x0, polygon.y0);
-        context.lineTo(polygon.x1, polygon.y1);
-        context.lineTo(polygon.x2, polygon.y2);
-        context.lineTo(polygon.x3, polygon.y3);
-        context.closePath();
-        context.fill();
+            for (let i=1; i < litPolygon.points.length; i++) {
+                context.lineTo(litPolygon.points[i].x, litPolygon.points[i].y);
+            }
+
+            context.closePath();
+            context.fill();
+        }
     });
 }

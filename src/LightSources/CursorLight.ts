@@ -13,10 +13,10 @@ export class CursorLight implements Light {
 
     generateSources(): LightSource[] {
         return [{
-            segment: { l1X: this.sourceX, l1Y: this.sourceY, l2X: this.sourceX + 40, l2Y: this.sourceY + 40 },
-            a0: 2.3,
-            a1: 1.1,
-            intensity: 1.0,
+            segment: { l1X: this.sourceX - 10, l1Y: this.sourceY, l2X: this.sourceX, l2Y: this.sourceY + 10 },
+            a0: 4,
+            a1: 3,
+            intensity: 0.65,
             emissionSegmentId: -1
           }];
     }

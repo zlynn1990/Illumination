@@ -1,7 +1,9 @@
+import { func } from "prop-types";
 import { RaysPerAngle } from "../Constants";
 import { LightSource } from "../LightSources/LightSource";
 import { LitPolygon } from "../LightSources/LitPolygon";
 import { LineSegment } from "../Primitives/LineSegment";
+import { Point } from "../Primitives/Point";
 import { Ray } from "../Primitives/Ray";
 import { SurfaceSegment } from "../Primitives/SurfaceSegment";
 
@@ -11,6 +13,8 @@ const MinRaysPerSource = 10;
 interface RayHit {
     x: number;
     y: number;
+
+    distance: number;
 
     perpX: number;
     perpY: number;
@@ -34,97 +38,186 @@ export function TraceLights(lightSources: LightSource[], surfaceSegments: Surfac
     lightSources.forEach(source => {
         let segment: LineSegment = source.segment;
 
-        const lightRange = source.a1 - source.a0;
+        // Initialize a polygon from the source and fill it with the starting point
+        const litPolygon: LitPolygon = {
+            intensity: source.intensity,
+            color: '#FFFFFF',
+            points: [
+                {
+                    x: segment.l1X,
+                    y: segment.l1Y
+                }
+            ]
+        };
 
-        const rayCount = Math.max(Math.round(Math.abs(lightRange)) * RaysPerAngle, MinRaysPerSource);
+        // Max spread of the light source between its angles
+        const lightSpread = source.a1 - source.a0;
+
+        const rayCount = Math.max(Math.round(Math.abs(lightSpread)) * RaysPerAngle, MinRaysPerSource);
 
         // Position increments for each ray origin along the segment
         let incX: number = (segment.l2X - segment.l1X) / rayCount;
         let incY: number = (segment.l2Y - segment.l1Y) / rayCount;
 
         // Angle increments for each ray direction along the segment
-        let angleInc = lightRange / rayCount;
+        let angleInc = lightSpread / rayCount;
 
-        let lastRay: Ray = { oX: 0, oY: 0, dX: 0, dY: 0, intensity: 0, emissionSegmentId: -1 };
-        let firstHit: RayHit = { x: 0, y: 0, perpX: 0, perpY: 0, segmentId: -1 };
-        let lastHit: RayHit = { x: 0, y: 0, perpX: 0, perpY: 0, segmentId: -1 };
+        let firstHit: RayHit = { x: 0, y: 0, distance: 0, perpX: 0, perpY: 0, segmentId: -1 };
+        let lastHit: RayHit = { x: 0, y: 0, distance: 0, perpX: 0, perpY: 0, segmentId: -1 };
 
-        // Draw n rays from the source light and
+        // Draw n rays from the source light
         for (let i = 0; i < rayCount; i++) {
-            let angle: number = source.a0 + angleInc * i;
-
-            let ray: Ray = {
+            const ray: Ray = {
                 oX: segment.l1X + incX * i,
                 oY: segment.l1Y + incY * i,
-                dX: Math.cos(angle),
-                dY: Math.sin(angle),
+                dX: Math.cos(source.a0 + angleInc * i),
+                dY: Math.sin(source.a0 + angleInc * i),
                 intensity: source.intensity,
                 emissionSegmentId: source.emissionSegmentId
             };
 
-            let rayHit: RayHit = TraceRay(ray, surfaceSegments);
+            const rayHit: RayHit = traceRay(ray, surfaceSegments);
 
             // Ray hit was valid
             if (rayHit.x >= 0) {
                 result.rays.push({ l1X: ray.oX, l1Y: ray.oY, l2X: rayHit.x, l2Y: rayHit.y });
 
-                // If the current hit differs in segment from the last hit or its the last ray form a new lit polygon
-                if (rayHit.segmentId !== lastHit.segmentId || i === RaysPerAngle - 1) {
-                    // Check to see if the the last two hits share a point
+                // The ray has hit a different surface
+                if (rayHit.segmentId !== lastHit.segmentId) {
                     if (lastHit.segmentId >= 0) {
                         const lastSegment = surfaceSegments[lastHit.segmentId];
                         const currentSegment = surfaceSegments[rayHit.segmentId];
 
-                        if (Math.abs(lastSegment.l1X - currentSegment.l1X) < MinDistance) {
-                            if (Math.abs(lastSegment.l1Y - lastSegment.l1Y)) {
+                        const connection: Point = testConnection(lastSegment, currentSegment);
 
+                        // If there is a direct connection ensure the lighting is continous
+                        if (connection.x >= 0 && i !== RaysPerAngle - 1) {
+                            litPolygon.points.push(connection);
+
+                            // Update the current and last ray hits to the new connected location
+                            rayHit.x = connection.x;
+                            rayHit.y = connection.y;
+                            lastHit.x = connection.x;
+                            lastHit.y = connection.y;
+                        } else { // Otherwise move to the edges of both segments to ensure continous lighting with little overlap
+                            const rayOrigin: Point = { x: ray.oX, y: ray.oY };
+
+                            const closestLastSegmentEdge: Point = closestEdge(lastSegment, { x: rayHit.x, y: rayHit.y });
+
+                            // If the hit is further than the edge, check if the edge is visible to the source
+                            if (rayHit.distance > distance(closestLastSegmentEdge.x, closestLastSegmentEdge.y, rayOrigin.x, rayOrigin.y)) {
+                                if (isVisible(closestLastSegmentEdge, rayOrigin, surfaceSegments)) {
+                                    litPolygon.points.push(closestLastSegmentEdge);
+
+                                    // Update the last hit to this point
+                                    lastHit.x = closestLastSegmentEdge.x;
+                                    lastHit.y = closestLastSegmentEdge.y;
+                                }
+                            } else { // Otherwise check if the closest edge on the new surface is visible to the source
+                                const closestCurrentEdgeSegement = closestEdge(currentSegment, { x: rayHit.x, y: rayHit.y });
+
+                                if (isVisible(closestCurrentEdgeSegement, rayOrigin, surfaceSegments)) {
+                                    litPolygon.points.push({ x: lastHit.x, y: lastHit.y });
+                                    litPolygon.points.push(closestCurrentEdgeSegement);
+                                } else {
+                                    litPolygon.points.push({ x: lastHit.x, y: lastHit.y });
+                                }
                             }
+
+                            litPolygon.points.push({ x: rayHit.x, y: rayHit.y });
                         }
-                    }
-                    if (lastRay.intensity > 0) {
-                        result.litPolygons.push({
-                            intensity: ray.intensity,
-                            color: '#FFFFF',
-                            polygon: {
-                                x0: lastRay.oX,
-                                y0: lastRay.oY,
-                                x1: ray.oX,
-                                y1: ray.oY,
-                                x2: lastHit.x,
-                                y2: lastHit.y,
-                                x3: firstHit.x,
-                                y3: firstHit.y
-                            }
-                        });
 
-                        result.lightSources.push({
-                            segment: {
-                                l1X: firstHit.x,
-                                l1Y: firstHit.y,
-                                l2X: lastHit.x,
-                                l2Y: lastHit.y
-                            },
-                            intensity: ray.intensity * 0.25,
-                            a0: Math.atan2(firstHit.perpY, firstHit.perpX),
-                            a1: Math.atan2(lastHit.perpY, lastHit.perpX),
-                            emissionSegmentId: lastHit.segmentId
-                        })
+                        // Create a light source from the last point until the connection
+                        result.lightSources.push(generateLightSource(firstHit, lastHit, ray.intensity));
+                    } else { // Otherwise register the first hit
+                        litPolygon.points.push({ x: rayHit.x, y: rayHit.y });
                     }
 
                     // Update the last hit to the new segment
                     firstHit = { ...rayHit };
-                    lastRay = { ...ray };
                 }
 
                 lastHit = { ...rayHit };
             }
         }
+
+        // Add the last hit to the polygon
+        litPolygon.points.push({ x: lastHit.x, y: lastHit.y });
+
+        // Finalize the polygon with its second source point
+        litPolygon.points.push({ x: segment.l2X, y: segment.l2Y });
+
+        result.litPolygons.push(litPolygon);
     });
 
     return result;
 }
 
-function TraceRay(ray: Ray, surfaceSegments: SurfaceSegment[]): RayHit {
+function distance(x0: number, y0: number, x1: number, y1: number): number {
+    return Math.sqrt(Math.pow(x1 - x0, 2) + (Math.pow(y1 - y0, 2)));
+}
+
+function closestEdge(segment: SurfaceSegment, point: Point): Point {
+    const edge1Dist = distance(segment.l1X, segment.l1Y, point.x, point.y);
+    const edge2Dist = distance(segment.l2X, segment.l2Y, point.x, point.y);
+
+    if (edge1Dist < edge2Dist) {
+        return { x: segment.l1X, y: segment.l1Y };
+    } else {
+        return { x: segment.l2X, y: segment.l2Y };
+    }
+}
+
+function generateLightSource(firstHit: RayHit, lastHit: RayHit, intensity: number): LightSource {
+    return {
+        segment: {
+            l1X: firstHit.x,
+            l1Y: firstHit.y,
+            l2X: lastHit.x,
+            l2Y: lastHit.y
+        },
+        intensity: intensity * 0.25,
+        a0: Math.atan2(firstHit.perpY, firstHit.perpX),
+        a1: Math.atan2(lastHit.perpY, lastHit.perpX),
+        emissionSegmentId: firstHit.segmentId
+    };
+}
+
+// Test to see if the two segments are connected
+function testConnection(s1: LineSegment, s2: LineSegment): Point {
+    if (Math.abs(s1.l1X - s2.l1X) < MinDistance && Math.abs(s1.l1Y - s2.l1Y) < MinDistance) {
+        return { x: s2.l1X, y: s2.l1Y };
+    } else if (Math.abs(s1.l1X - s2.l2X) < MinDistance && Math.abs(s1.l1Y - s2.l2Y) < MinDistance) {
+        return { x: s2.l2X, y: s2.l2Y };
+    } else if (Math.abs(s1.l2X - s2.l1X) < MinDistance && Math.abs(s1.l2Y - s2.l1Y) < MinDistance) {
+        return { x: s2.l1X, y: s2.l1Y };
+    } else if (Math.abs(s1.l2X - s2.l2X) < MinDistance && Math.abs(s1.l2Y - s2.l2Y) < MinDistance) {
+        return { x: s2.l2X, y: s2.l2Y };
+    } else {
+        return { x: -1, y: -1 };
+    }
+}
+
+// Check if a target point is directly visible from a given location
+function isVisible(point: Point, target: Point, surfaceSegments: SurfaceSegment[]): boolean {
+    const distanceToTarget = distance(point.x, point.y, target.x, target.y);
+
+    // Cast a ray to the target to see if its directly visible
+    const testRay: Ray = {
+        oX: point.x,
+        oY: point.y,
+        dX: (point.x - target.x) / distanceToTarget,
+        dY: (point.y - target.y) / distanceToTarget,
+        intensity: -1,
+        emissionSegmentId: -1
+    };
+
+    const rayHit = traceRay(testRay, surfaceSegments);
+
+    return Math.abs(rayHit.distance - distanceToTarget) > MinDistance;
+}
+
+function traceRay(ray: Ray, surfaceSegments: SurfaceSegment[]): RayHit {
     // Closest segment stats
     let cDist: number = 100000000;
     let cPerpX: number = -1;
@@ -137,7 +230,7 @@ function TraceRay(ray: Ray, surfaceSegments: SurfaceSegment[]): RayHit {
     if (ray.emissionSegmentId >= 0) {
         hitableSegmentIds.push(...surfaceSegments[ray.emissionSegmentId].hitableSegmentIds);
     } else { // Otherwise assume all surfaces are hitable
-        for (let i=0; i < surfaceSegments.length; i++) {
+        for (let i = 0; i < surfaceSegments.length; i++) {
             hitableSegmentIds.push(i);
         }
     }
@@ -221,11 +314,12 @@ function TraceRay(ray: Ray, surfaceSegments: SurfaceSegment[]): RayHit {
         return {
             x: Math.max(ray.oX + ray.dX * cDist, 0),
             y: Math.max(ray.oY + ray.dY * cDist, 0),
+            distance: cDist,
             perpX: cPerpX,
             perpY: cPerpY,
             segmentId: cSegment
         };
     }
 
-    return { x: -100, y: -100, perpX: -100, perpY: -100, segmentId: -1 };
+    return { x: -100, y: -100, distance: 0, perpX: -100, perpY: -100, segmentId: -1 };
 }

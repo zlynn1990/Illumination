@@ -1,8 +1,8 @@
-import { Polygon } from "../Primitives/Polygon";
+import { Point } from "../Primitives/Point";
 
 export interface LitPolygon {
     intensity: number;
     color: string;
 
-    polygon: Polygon;
+    points: Point[];
 }

@@ -11,19 +11,27 @@ import { Light } from './LightSources/Light';
 import { LightSource } from './LightSources/LightSource';
 import { CursorLight } from './LightSources/CursorLight';
 import { LineSegment } from './Primitives/LineSegment';
-import { getBooleanFromQueryString } from './Utilities';
+import { getBooleanFromQueryString, getStringFromQueryString } from './Utilities';
 
 const topLamp = new Lamp({
-  segment: { l1X: 508, l1Y: 35, l2X: 560, l2Y: 35 },
+  segment: { l1X: 505, l1Y: 35, l2X: 560, l2Y: 35 },
   a0: 2.3,
-  a1: 1.1,
-  intensity: 1.0,
+  a1: 1,
+  intensity: 0.65,
   emissionSegmentId: -1
 });
 
 const cursorLight = new CursorLight();
 
-const lights = Array<Light>(topLamp, cursorLight);
+const lights: Light[] = [];
+
+if (getBooleanFromQueryString('lamp', 'true')) {
+  lights.push(topLamp);
+}
+
+if (getBooleanFromQueryString('cursor', 'true')) {
+  lights.push(cursorLight);
+}
 
 const rockBg = new Image(600, 600);
 rockBg.src = RockBgData;
@@ -43,7 +51,10 @@ function render(timeStamp: number) {
   outputContext.fillRect(0, 0, CanvasWidth, CanvasHeight);
 
   // Blur all light rendering for smoothness
-  outputContext.filter = 'blur(5px)';
+  if (getBooleanFromQueryString('blur', 'true')) {
+    outputContext.filter = 'blur(3px)';
+  }
+
 
   let lightSources: LightSource[] = [];
   let sourceRays: Array<LineSegment[]> = [];
@@ -69,9 +80,11 @@ function render(timeStamp: number) {
 
   outputContext.filter = 'none';
 
-  outputContext.globalAlpha = 1.0;
-  outputContext.globalCompositeOperation = 'multiply';
-  outputContext.drawImage(rockBg, 0, 0);
+  if (getBooleanFromQueryString('bg', 'true')) {
+    outputContext.globalAlpha = 1.0;
+    outputContext.globalCompositeOperation = getStringFromQueryString('compositeMode', 'overlay');
+    outputContext.drawImage(rockBg, 0, 0);
+  }
 
   outputContext.globalAlpha = 1.0;
   outputContext.globalCompositeOperation = 'source-over';
@@ -103,7 +116,11 @@ function render(timeStamp: number) {
   outputContext.fillText(`FPS: ${fps}`, 10, 30);
   outputContext.fillText(`Rays: ${(rayCount * fps).toLocaleString()} / s`, 10, 60);
 
-  window.requestAnimationFrame(render);
+  // Keep rendering continously unless specified otherwise
+  if (getBooleanFromQueryString('continuous', 'true')) {
+    window.requestAnimationFrame(render);
+  }
+
 }
 
 function App() {
