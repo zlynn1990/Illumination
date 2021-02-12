@@ -1,10 +1,16 @@
-import { LitPolygon } from "../LightSources/LitPolygon";
+import { IntensityPoint, LitPolygon } from "../LightSources/LitPolygon";
 import { LineSegment } from "../Primitives/LineSegment";
 
-export function RenderLines(context: CanvasRenderingContext2D, segments: LineSegment[], color: string) {
+function colorFromIntensity(intensityPoint: IntensityPoint): string {
+    const level = (intensityPoint.value / 1.0);
+
+    return `rgba(255, 255, 255, ${level})`;
+}
+
+export function renderLines(context: CanvasRenderingContext2D, segments: LineSegment[], color: string, width: number) {
     context.beginPath();
     context.strokeStyle = color;
-    context.lineWidth = 1;
+    context.lineWidth = width;
 
     segments.forEach(segment => {
         context.moveTo(segment.l1X, segment.l1Y);
@@ -14,20 +20,24 @@ export function RenderLines(context: CanvasRenderingContext2D, segments: LineSeg
     context.stroke();
 }
 
-export function RenderPolygons(context: CanvasRenderingContext2D, litPolygons: LitPolygon[]) {
-    context.fillStyle = '#FFFFFF';
+export function renderPolygons(context: CanvasRenderingContext2D, litPolygons: LitPolygon[]) {
+    litPolygons.forEach(polygon => {
+        const gradient = context.createLinearGradient(polygon.maxIntensity.x, polygon.maxIntensity.y, polygon.minIntensity.x, polygon.minIntensity.y);
+        gradient.addColorStop(0, colorFromIntensity(polygon.maxIntensity));
+        gradient.addColorStop(1, colorFromIntensity(polygon.minIntensity));
+        context.fillStyle = gradient;
 
-    litPolygons.forEach(litPolygon => {
-        context.globalAlpha = litPolygon.intensity;
+        // Valid polygon must have at least 3 points
+        if (polygon.points && polygon.points.length > 2) {
+            context.beginPath();
+            context.moveTo(polygon.points[0].x, polygon.points[0].y);
 
-        let polygon = litPolygon.polygon;
+            for (let i=1; i < polygon.points.length; i++) {
+                context.lineTo(polygon.points[i].x, polygon.points[i].y);
+            }
 
-        context.beginPath();
-        context.moveTo(polygon.x0, polygon.y0);
-        context.lineTo(polygon.x1, polygon.y1);
-        context.lineTo(polygon.x2, polygon.y2);
-        context.lineTo(polygon.x3, polygon.y3);
-        context.closePath();
-        context.fill();
+            context.closePath();
+            context.fill();
+        }
     });
 }
