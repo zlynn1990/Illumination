@@ -4,9 +4,6 @@ export interface SurfaceSegment {
 
     l2X: number;
     l2Y: number;
-
-    previousSegmentId: number;
-    nextSegmentId: number;
     
     hitableSegmentIds: number[];
 }

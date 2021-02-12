@@ -10,9 +10,7 @@ export function CreateBorderSurfaces(): SurfaceSegment[] {
         l1Y: 0,
         l2X: CanvasWidth,
         l2Y: 0,
-        previousSegmentId: 15,
-        nextSegmentId: 1,
-        hitableSegmentIds: [2, 1, 6, 7, 8, 10, 13, 14, 15]
+        hitableSegmentIds: [1, 2, 6, 7, 8, 10, 13, 14, 15]
     });
 
     // Right - Top [1]
@@ -21,9 +19,7 @@ export function CreateBorderSurfaces(): SurfaceSegment[] {
         l1Y: 0,
         l2X: CanvasWidth,
         l2Y: 300,
-        previousSegmentId: 0,
-        nextSegmentId: 1,
-        hitableSegmentIds: [2, 0]
+        hitableSegmentIds: [0, 2, 7, 8, 10, 11, 13, 14, 15]
     });
 
     // Block 1 - Top [2]
@@ -32,8 +28,6 @@ export function CreateBorderSurfaces(): SurfaceSegment[] {
         l1Y: 300,
         l2X: CanvasWidth,
         l2Y: 300,
-        previousSegmentId: 0,
-        nextSegmentId: 1,
         hitableSegmentIds: [0, 1]
     });
 
@@ -43,9 +37,7 @@ export function CreateBorderSurfaces(): SurfaceSegment[] {
         l1Y: 300,
         l2X: 300,
         l2Y: 335,
-        previousSegmentId: 0,
-        nextSegmentId: 1,
-        hitableSegmentIds: [7, 8]
+        hitableSegmentIds: [0, 6, 7, 8, 10, 11, 13, 15]
     });
 
     // Block 1 - Bottom [4]
@@ -54,9 +46,7 @@ export function CreateBorderSurfaces(): SurfaceSegment[] {
         l1Y: 335,
         l2X: CanvasWidth,
         l2Y: 335,
-        previousSegmentId: 0,
-        nextSegmentId: 1,
-        hitableSegmentIds: [5, 6]
+        hitableSegmentIds: [5, 6, 7, 8, 10, 11]
     });
 
     // Right - Bottom [5]
@@ -65,9 +55,7 @@ export function CreateBorderSurfaces(): SurfaceSegment[] {
         l1Y: 335,
         l2X: CanvasWidth,
         l2Y: CanvasHeight,
-        previousSegmentId: 0,
-        nextSegmentId: 1,
-        hitableSegmentIds: [4, 6]
+        hitableSegmentIds: [4, 6, 7, 8, 11]
     });
 
     // Floor - Right [6]
@@ -76,8 +64,6 @@ export function CreateBorderSurfaces(): SurfaceSegment[] {
         l1Y: CanvasHeight,
         l2X: CanvasWidth,
         l2Y: CanvasHeight,
-        previousSegmentId: 0,
-        nextSegmentId: 1,
         hitableSegmentIds: [4, 3, 5, 7, 12, 13, 15, 0]
     });
 
@@ -87,9 +73,7 @@ export function CreateBorderSurfaces(): SurfaceSegment[] {
         l1Y: 480,
         l2X: 134,
         l2Y: CanvasHeight,
-        previousSegmentId: 0,
-        nextSegmentId: 1,
-        hitableSegmentIds: [0, 3, 4, 6]
+        hitableSegmentIds: [0, 3, 4, 5, 6]
     });
 
     // Block 2 - Top [8]
@@ -98,9 +82,7 @@ export function CreateBorderSurfaces(): SurfaceSegment[] {
         l1Y: 480,
         l2X: 134,
         l2Y: 480,
-        previousSegmentId: 0,
-        nextSegmentId: 1,
-        hitableSegmentIds: [11, 12]
+        hitableSegmentIds: [0, 1, 3, 4, 5, 11, 12]
     });
     
     // Block 2 - Left [9]
@@ -109,8 +91,6 @@ export function CreateBorderSurfaces(): SurfaceSegment[] {
         l1Y: 480,
         l2X: 100,
         l2Y: CanvasHeight,
-        previousSegmentId: 0,
-        nextSegmentId: 1,
         hitableSegmentIds: [10, 11, 12]
     });
 
@@ -120,8 +100,6 @@ export function CreateBorderSurfaces(): SurfaceSegment[] {
         l1Y: CanvasHeight,
         l2X: 100,
         l2Y: CanvasHeight,
-        previousSegmentId: 0,
-        nextSegmentId: 1,
         hitableSegmentIds: [9, 11, 12]
     });
 
@@ -131,9 +109,7 @@ export function CreateBorderSurfaces(): SurfaceSegment[] {
         l1Y: 335,
         l2X: 0,
         l2Y: CanvasHeight,
-        previousSegmentId: 0,
-        nextSegmentId: 1,
-        hitableSegmentIds: [10, 12, 0]
+        hitableSegmentIds: [0, 1, 3, 4, 5, 10, 12]
     });
 
     // Block 3 - Bottom [12]
@@ -142,8 +118,6 @@ export function CreateBorderSurfaces(): SurfaceSegment[] {
         l1Y: 335,
         l2X: 153,
         l2Y: 335,
-        previousSegmentId: 0,
-        nextSegmentId: 1,
         hitableSegmentIds: [8, 9, 10, 11]
     });
 
@@ -153,9 +127,7 @@ export function CreateBorderSurfaces(): SurfaceSegment[] {
         l1Y: 300,
         l2X: 153,
         l2Y: 335,
-        previousSegmentId: 0,
-        nextSegmentId: 1,
-        hitableSegmentIds: [0, 6]
+        hitableSegmentIds: [0, 1, 3, 6]
     });
 
     // Block 3 - Top [14]
@@ -164,8 +136,6 @@ export function CreateBorderSurfaces(): SurfaceSegment[] {
         l1Y: 300,
         l2X: 153,
         l2Y: 300,
-        previousSegmentId: 15,
-        nextSegmentId: 13,
         hitableSegmentIds: [0, 15]
     });
 
@@ -175,9 +145,7 @@ export function CreateBorderSurfaces(): SurfaceSegment[] {
         l1Y: 0,
         l2X: 0,
         l2Y: 300,
-        previousSegmentId: 0,
-        nextSegmentId: 1,
-        hitableSegmentIds: [0, 14, 3, 6]
+        hitableSegmentIds: [0, 1, 3, 6, 14]
     });
 
     return segments;

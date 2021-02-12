@@ -1,8 +1,14 @@
 import { Point } from "../Primitives/Point";
 
+export interface IntensityPoint {
+    x: number;
+    y: number;
+
+    value: number;
+}
 export interface LitPolygon {
-    intensity: number;
-    color: string;
+    maxIntensity: IntensityPoint;
+    minIntensity: IntensityPoint;
 
     points: Point[];
 }
