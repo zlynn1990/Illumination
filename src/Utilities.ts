@@ -13,5 +13,13 @@ export function getNumberFromQueryString(name: string, defaultValue: number): nu
 }
 
 export function getBooleanFromQueryString(name: string, defaultValue: string): boolean {
-    return getStringFromQueryString(name, defaultValue.toString()) === 'true';
+    const string = getStringFromQueryString(name, defaultValue.toString());
+
+    if (string === '1') {
+        return true;
+    } else if (string === '0') {
+        return false;
+    }
+
+    return string === 'true';
 }

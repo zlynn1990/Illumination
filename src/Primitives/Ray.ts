@@ -1,10 +1,9 @@
-export interface Ray {
-    oX: number;
-    oY: number;
+import { Point } from "./Point";
 
-    dX: number;
-    dY: number;
+export interface Ray {
+    origin: Point;
+    angle: number;
 
     intensity: number;
-    emissionSegmentId: number;
+    emissionSurfaceId: number;
 }
