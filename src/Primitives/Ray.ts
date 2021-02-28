@@ -1,10 +1,11 @@
+import { Point } from "./Point";
+
 export interface Ray {
-    oX: number;
-    oY: number;
+    origin: Point;
+    angle: number;
+}
 
-    dX: number;
-    dY: number;
-
+export interface LitRay extends Ray {
     intensity: number;
-    emissionSegmentId: number;
+    emissionSurfaceId: number;
 }

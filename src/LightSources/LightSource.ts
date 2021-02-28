@@ -3,10 +3,10 @@ import { LineSegment } from "../Primitives/LineSegment";
 export interface LightSource {
     segment: LineSegment;
 
-    a0: number;
-    a1: number;
+    p1Angle: number;
+    p2Angle: number;
 
     intensity: number;
 
-    emissionSegmentId: number;
+    emissionSurfaceId: number;
 }

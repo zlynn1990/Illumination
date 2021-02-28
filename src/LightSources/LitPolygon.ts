@@ -1,8 +1,7 @@
 import { Point } from "../Primitives/Point";
 
 export interface IntensityPoint {
-    x: number;
-    y: number;
+    location: Point;
 
     value: number;
 }

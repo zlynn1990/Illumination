@@ -1,7 +1,6 @@
-export interface LineSegment {
-    l1X: number;
-    l1Y: number;
+import { Point } from "./Point";
 
-    l2X: number;
-    l2Y: number;
+export interface LineSegment {
+    p1: Point;
+    p2: Point;
 }
