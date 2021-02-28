@@ -1,52 +1,38 @@
 import './App.css';
 import React, { useEffect, useRef } from 'react';
-import { CanvasWidth, CanvasHeight, RockBgData, IlluminationDepth } from './Constants';
+import { CanvasWidth, CanvasHeight, RockBgData } from './Constants';
 import { traceLights, TraceResult } from './Renderers/RayTracer';
 import { Lamp } from './LightSources/Lamp';
 import { FpsManager } from './FpsManager';
-import { renderLines, renderPolygons } from './Renderers/PrimativeRenderer';
+import { renderLines, renderPolygons } from './Renderers/PrimitiveRenderer';
 import { Surface } from './Environment/Surface';
 import { Light } from './LightSources/Light';
 import { LightSource } from './LightSources/LightSource';
 import { CursorLight } from './LightSources/CursorLight';
 import { LineSegment } from './Primitives/LineSegment';
-import { getBooleanFromQueryString } from './Utilities';
-import { startBlur, fill, endBlur, overlayImage } from './Renderers/canvasHelper';
+import { getBooleanFromQueryString, getNumberFromQueryString } from './Utilities';
+import { startBlur, fill, endBlur, overlayImage } from './Renderers/CanvasHelper';
 import { createBorderSurfaces } from './Environment/EnvironmentBuilder';
 
-const topLamp = new Lamp({
-  segment: { l1X: 505, l1Y: 35, l2X: 560, l2Y: 35 },
-  minAngle: 2.3,
-  maxAngle: 1,
-  intensity: 0.8,
-  emissionSegmentId: -1
-});
+let surfaces: Surface[] = createBorderSurfaces();
 
-// const topLamp = new Lamp({
-//   segment: { l1X: 40, l1Y: 500, l2X: 40, l2Y: 500 },
-//   a0: 2.3,
-//   a1: 1,
-//   intensity: 0.8,
-//   emissionSegmentId: -1
-// });
-
-// const topLamp = new Lamp({
-//   segment: { l1X: 600, l1Y: 420, l2X: 600, l2Y: 480 },
-//   a0: 3.5,
-//   a1: 2.5,
-//   intensity: 0.8,
-//   emissionSegmentId: -1
-// });
-
-const cursorLight = new CursorLight(1.9);
+let cursorLight: CursorLight | undefined = undefined;
 
 const lights: Light[] = [];
 
 if (getBooleanFromQueryString('lamp', 'true')) {
-  lights.push(topLamp);
+  const lampSurface: Surface = {
+    id: surfaces.length,
+    normal: { x: 0, y: 1 },
+    segment: { p1: { x: 505, y: 35 }, p2: { x: 565, y: 35 } }
+  }
+
+  surfaces.push(lampSurface);
+  lights.push(new Lamp(lampSurface, 2.3, 0.8, 1));
 }
 
 if (getBooleanFromQueryString('cursor', 'true')) {
+  cursorLight = new CursorLight(25, 25, surfaces);
   lights.push(cursorLight);
 }
 
@@ -56,10 +42,6 @@ rockBg.src = RockBgData;
 let context: CanvasRenderingContext2D | null;
 let fpsManager = new FpsManager();
 
-let surfaceSegments: Surface[] = createBorderSurfaces();
-
-//surfaceSegments.push(movingSurface);
-
 let lastTimeStamp = 0;
 
 function render(timeStamp: number) {
@@ -68,43 +50,51 @@ function render(timeStamp: number) {
   let deltaTime = timeStamp - lastTimeStamp;
   lastTimeStamp = timeStamp;
 
-  cursorLight.rotate(deltaTime);
-
   // Clear the frame with black
   fill(context, '#090909');
 
   // Blur all light rendering for smoothness
   if (getBooleanFromQueryString('blur', 'true')) {
-    startBlur(context, 5);
+    startBlur(context, 3);
   }
 
+  let totalRays: number = 0;
   let lightSources: LightSource[] = [];
+
   let debugRays: Array<LineSegment[]> = [];
   let debugSources: LightSource[] = [];
 
   // Render the first set of light sources directly from defined lights
   lights.forEach(light => {
     lightSources.push(...light.generateSources());
+
+    debugSources.push(...lightSources);
   });
 
-  // Trace the intial lights
-  let result: TraceResult = traceLights(lightSources, surfaceSegments);
+  // Trace the initial lights
+  let result: TraceResult = traceLights(lightSources, surfaces);
 
   if (getBooleanFromQueryString('debug', 'false')) {
-    debugRays.push([...result.rays]);
-    debugSources.push (...result.lightSources);
+    totalRays += result.totalRays;
+
+    debugRays.push([...result.visibleRays]);
+    debugSources.push(...result.lightSources);
   }
 
   // Render initial light polygons
   renderPolygons(context, result.litPolygons);
 
+  const illuminationDepth: number = getNumberFromQueryString('depth', 2);
+
   // Next continue tracing all resulting light sources up to the desired depth
-  for (let i=1; i < IlluminationDepth; i++) {
-    result = traceLights(result.lightSources, surfaceSegments);
+  for (let i = 1; i < illuminationDepth; i++) {
+    result = traceLights(result.lightSources, surfaces);
 
     if (getBooleanFromQueryString('debug', 'false')) {
-      debugRays.push([...result.rays]);
-      debugSources.push (...result.lightSources);
+      totalRays += result.totalRays;
+
+      debugRays.push([...result.visibleRays]);
+      debugSources.push(...result.lightSources);
     }
 
     renderPolygons(context, result.litPolygons);
@@ -120,7 +110,7 @@ function render(timeStamp: number) {
 
   // Debug line rendering
   if (getBooleanFromQueryString('debug', 'false')) {
-    for (let i=0; i < debugRays.length; i++) {
+    for (let i = 0; i < debugRays.length; i++) {
       let hslColor: string = `hsl(${(i * 70) % 360}, 100%, 50%)`;
 
       renderLines(context, debugRays[i], hslColor, 0.5);
@@ -128,17 +118,11 @@ function render(timeStamp: number) {
 
     let sourceSegments: LineSegment[] = [];
 
-    for (let i=0; i < debugSources.length; i++) {
+    for (let i = 0; i < debugSources.length; i++) {
       sourceSegments.push(debugSources[i].segment);
     }
 
     renderLines(context, sourceSegments, '#42bb00', 5);
-  }
-
-  let rayCount = 0;
-
-  for (let i=0; i < debugRays.length; i++) {
-    rayCount += debugRays[i].length;
   }
 
   fpsManager.update(timeStamp);
@@ -154,10 +138,10 @@ function render(timeStamp: number) {
     context.font = "20px Georgia";
     context.fillStyle = "white";
     context.fillText(`FPS: ${fps}`, 10, 30);
-    context.fillText(`Rays: ${(rayCount * fps).toLocaleString()} / s`, 10, 60);
+    context.fillText(`Rays: ${(totalRays * fps).toLocaleString()} / s`, 10, 60);
   }
 
-  // Keep rendering continously unless specified otherwise
+  // Keep rendering continuously unless specified otherwise
   if (getBooleanFromQueryString('continuous', 'true')) {
     window.requestAnimationFrame(render);
   }
@@ -177,8 +161,12 @@ function App() {
 
   function onMouseMove(event: { clientX: number; clientY: number; }) {
     if (outputCanvas.current) {
-      cursorLight.updatePosition(event.clientX - outputCanvas.current.offsetLeft,
-        event.clientY - outputCanvas.current.offsetTop);
+      if (cursorLight !== undefined) {
+        cursorLight.update({
+          x: event.clientX - outputCanvas.current.offsetLeft,
+          y: event.clientY - outputCanvas.current.offsetTop
+        });
+      }
     }
   }
 
